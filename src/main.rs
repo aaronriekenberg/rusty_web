@@ -4,6 +4,8 @@ extern crate logger;
 extern crate router;
 extern crate simple_logger;
 
+use iron::headers::ContentType;
+use iron::modifiers::Header;
 use iron::prelude::Chain;
 use iron::prelude::Iron;
 use iron::prelude::IronResult;
@@ -15,15 +17,34 @@ use router::Router;
 use std::process::Command;
 
 fn index_handler(_: &mut Request) -> IronResult<Response> {
-  Ok(Response::with((iron::status::Ok, "Hello world!")))
+  let mut s = String::new();
+  s.push_str("<html>");
+  s.push_str("<head><title>Rust is the new Ada</title></head>");
+  s.push_str("<body>");
+  s.push_str("<h1>Rust is the new Ada</h1>");
+  s.push_str("<a href=\"ls\">ls</a>");
+  s.push_str("</body>");
+  s.push_str("</html>");
+  return Ok(Response::with((iron::status::Ok, Header(ContentType::html()), s)));
 }
 
 fn ls_handler(_: &mut Request) -> IronResult<Response> {
-  let output = Command::new("ls")
-                        .arg("-l")
-                        .output()
-                        .expect("failed to execute process");
-  return Ok(Response::with((iron::status::Ok, String::from_utf8_lossy(&output.stdout).into_owned())));
+  let command_output =
+    match Command::new("ls").arg("-l").output() {
+      Ok(output) => String::from_utf8_lossy(&output.stdout).into_owned(),
+      Err(err) => format!("command error: {}", err),
+    };
+  let mut s = String::new();
+  s.push_str("<html>");
+  s.push_str("<head><title>ls</title></head>");
+  s.push_str("<body>");
+  s.push_str("<pre>");
+  s.push_str("$ ls -l\n\n");
+  s.push_str(&command_output);
+  s.push_str("</pre>");
+  s.push_str("</body>");
+  s.push_str("</html>");
+  return Ok(Response::with((iron::status::Ok, Header(ContentType::html()), s)));
 }
 
 fn main() {
