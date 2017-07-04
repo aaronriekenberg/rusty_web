@@ -21,12 +21,10 @@ fn main() {
   simple_logger::init_with_level(LogLevel::Info).unwrap();
 
   let mut router = Router::new();
-
   router.get("/", handler, "index");
 
-  let (logger_before, logger_after) = Logger::new(None);
-
   let mut chain = Chain::new(router);
+  let (logger_before, logger_after) = Logger::new(None);
   chain.link_before(logger_before);
   chain.link_after(logger_after);
 
