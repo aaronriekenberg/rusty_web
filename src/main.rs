@@ -2,6 +2,9 @@ extern crate iron;
 #[macro_use] extern crate log;
 extern crate logger;
 extern crate router;
+#[macro_use]
+extern crate serde_derive;
+extern crate serde_yaml;
 extern crate simple_logger;
 
 use iron::Handler;
@@ -15,23 +18,35 @@ use iron::prelude::Response;
 use log::LogLevel;
 use logger::Logger;
 use router::Router;
+use std::error::Error;
+use std::fs::File;
+use std::io::Read;
 use std::process::Command;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 struct CommandInfo {
-  http_path: &'static str,
-  command: &'static str,
-  arguments: Vec<&'static str>,
-  description: &'static str
+  http_path: String,
+  description: String,
+  command: String,
+  args: Vec<String>
 }
 
-fn get_commands() -> Vec<CommandInfo> {
-  return vec![
-    CommandInfo { http_path: "/ifconfig", command: "ifconfig",
-                  arguments: vec![], description: "ifconfig" },
-    CommandInfo { http_path: "/ls", command: "ls",
-                  arguments: vec!["-l"], description: "ls -l" }
-  ]
+#[derive(Debug, Serialize, Deserialize)]
+struct Configuration {
+  listen_address: String,
+  commands: Vec<CommandInfo>
+}
+
+fn read_config() -> Result<Configuration, Box<Error>> {
+  let mut file = File::open("config.yml")?;
+
+  let mut file_contents = String::new();
+
+  file.read_to_string(&mut file_contents)?;
+
+  let configuration: Configuration = serde_yaml::from_str(&file_contents)?;
+
+  return Ok(configuration);
 }
 
 struct IndexHandler {
@@ -39,7 +54,7 @@ struct IndexHandler {
 }
 
 impl IndexHandler {
-  pub fn new(commands: &Vec<CommandInfo>) -> IndexHandler {
+  pub fn new(config: &Configuration) -> IndexHandler {
     let mut s = String::new();
     s.push_str("<html>");
     s.push_str("<head><title>Rusty Web</title></head>");
@@ -47,11 +62,11 @@ impl IndexHandler {
     s.push_str("<h1>Rusty Web</h1>");
     s.push_str("<h2>Commands:</h2>");
     s.push_str("<ul>");
-    for command_info in commands.iter() {
+    for command_info in config.commands.iter() {
       s.push_str("<li><a href=\"");
-      s.push_str(command_info.http_path);
+      s.push_str(&command_info.http_path);
       s.push_str("\">");
-      s.push_str(command_info.description);
+      s.push_str(&command_info.description);
       s.push_str("</a></li>");
     }
     s.push_str("</ul>");
@@ -75,9 +90,9 @@ struct CommandHandler {
 
 impl Handler for CommandHandler {
   fn handle(&self, _: &mut Request) -> IronResult<Response> {
-    let mut command = Command::new(self.command_info.command);
+    let mut command = Command::new(&self.command_info.command);
     let mut args_string = String::new();
-    for arg in self.command_info.arguments.iter() {
+    for arg in self.command_info.args.iter() {
       command.arg(arg);
       args_string.push_str(arg);
       args_string.push(' ');
@@ -107,22 +122,30 @@ impl Handler for CommandHandler {
   }
 }
 
-fn setup_router(router: &mut router::Router) {
-  let commands = get_commands();
+fn setup_router(
+  router: &mut router::Router,
+  config: &Configuration) {
 
-  router.get("/", IndexHandler::new(&commands), "index");
+  router.get("/", IndexHandler::new(config), "index");
 
-  for command_info in commands.iter() {
+  for command_info in config.commands.iter() {
     let handler = CommandHandler { command_info: command_info.clone() };
-    router.get(command_info.http_path, handler, command_info.description);
+    router.get(&command_info.http_path, handler, &command_info.description);
   }
 }
 
 fn main() {
   simple_logger::init_with_level(LogLevel::Info).unwrap();
 
+  let config = match read_config() {
+    Ok(config) => config,
+    Err(error) => panic!("error reading configuration: {}", error)
+  };
+
+  info!("config = {:?}", config);
+
   let mut router = Router::new();
-  setup_router(&mut router);
+  setup_router(&mut router, &config);
 
   let mut chain = Chain::new(router);
   let (logger_before, logger_after) = Logger::new(None);

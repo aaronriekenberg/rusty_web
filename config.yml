@@ -1,0 +1,13 @@
+listen_address: 127.0.0.1:8080
+
+commands:
+
+- http_path: /ifconfig
+  description: ifconfig
+  command: ifconfig
+  args: []
+
+- http_path: /netstat
+  description: netstat
+  command: netstat
+  args: [-a, -n]
