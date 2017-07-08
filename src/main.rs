@@ -27,20 +27,46 @@ struct CommandInfo {
 
 fn get_commands() -> Vec<CommandInfo> {
   return vec![
-    CommandInfo { http_path: "/ls", command: "ls", arguments: vec!["-l"], description: "ls -l" }
+    CommandInfo { http_path: "/ifconfig", command: "ifconfig",
+                  arguments: vec![], description: "ifconfig" },
+    CommandInfo { http_path: "/ls", command: "ls",
+                  arguments: vec!["-l"], description: "ls -l" }
   ]
 }
 
-fn index_handler(_: &mut Request) -> IronResult<Response> {
-  let mut s = String::new();
-  s.push_str("<html>");
-  s.push_str("<head><title>Rust is the new Ada</title></head>");
-  s.push_str("<body>");
-  s.push_str("<h1>Rust is the new Ada</h1>");
-  s.push_str("<a href=\"ls\">ls</a>");
-  s.push_str("</body>");
-  s.push_str("</html>");
-  return Ok(Response::with((iron::status::Ok, Header(ContentType::html()), s)));
+struct IndexHandler {
+  index_string: String
+}
+
+impl IndexHandler {
+  pub fn new(commands: &Vec<CommandInfo>) -> IndexHandler {
+    let mut s = String::new();
+    s.push_str("<html>");
+    s.push_str("<head><title>Rusty Web</title></head>");
+    s.push_str("<body>");
+    s.push_str("<h1>Rusty Web</h1>");
+    s.push_str("<h2>Commands:</h2>");
+    s.push_str("<ul>");
+    for command_info in commands.iter() {
+      s.push_str("<li><a href=\"");
+      s.push_str(command_info.http_path);
+      s.push_str("\">");
+      s.push_str(command_info.description);
+      s.push_str("</a></li>");
+    }
+    s.push_str("</ul>");
+    s.push_str("</body>");
+    s.push_str("</html>");
+    IndexHandler { index_string: s }
+  }
+}
+
+impl Handler for IndexHandler {
+  fn handle(&self, _: &mut Request) -> IronResult<Response> {
+    return Ok(Response::with((iron::status::Ok,
+                              Header(ContentType::html()), 
+                              self.index_string.clone())));
+  }
 }
 
 struct CommandHandler {
@@ -81,18 +107,22 @@ impl Handler for CommandHandler {
   }
 }
 
-fn main() {
-  simple_logger::init_with_level(LogLevel::Info).unwrap();
-
+fn setup_router(router: &mut router::Router) {
   let commands = get_commands();
 
-  let mut router = Router::new();
-  router.get("/", index_handler, "index");
+  router.get("/", IndexHandler::new(&commands), "index");
 
   for command_info in commands.iter() {
     let handler = CommandHandler { command_info: command_info.clone() };
     router.get(command_info.http_path, handler, command_info.description);
   }
+}
+
+fn main() {
+  simple_logger::init_with_level(LogLevel::Info).unwrap();
+
+  let mut router = Router::new();
+  setup_router(&mut router);
 
   let mut chain = Chain::new(router);
   let (logger_before, logger_after) = Logger::new(None);
