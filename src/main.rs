@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate iron;
 #[macro_use] extern crate log;
 extern crate logger;
@@ -6,6 +7,7 @@ extern crate router;
 extern crate serde_yaml;
 extern crate simple_logger;
 
+use chrono::prelude::Local;
 use iron::Handler;
 use iron::headers::ContentType;
 use iron::modifiers::Header;
@@ -47,6 +49,11 @@ fn read_config() -> Result<Configuration, Box<Error>> {
   let configuration: Configuration = serde_yaml::from_str(&file_contents)?;
 
   return Ok(configuration);
+}
+
+fn current_time_string() -> String {
+  let now = Local::now();  
+  return now.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string();
 }
 
 struct IndexHandler {
@@ -113,6 +120,9 @@ impl Handler for CommandHandler {
     s.push_str("</title></head>");
     s.push_str("<body>");
     s.push_str("<pre>");
+    s.push_str("Now: ");
+    s.push_str(&current_time_string());
+    s.push_str("\n\n");
     s.push_str("$ ");
     s.push_str(&self.command_info.command);
     s.push(' ');
