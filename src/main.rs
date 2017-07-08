@@ -2,8 +2,7 @@ extern crate iron;
 #[macro_use] extern crate log;
 extern crate logger;
 extern crate router;
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
 extern crate simple_logger;
 
@@ -34,6 +33,7 @@ struct CommandInfo {
 #[derive(Debug, Serialize, Deserialize)]
 struct Configuration {
   listen_address: String,
+  main_page_title: String,
   commands: Vec<CommandInfo>
 }
 
@@ -57,9 +57,13 @@ impl IndexHandler {
   pub fn new(config: &Configuration) -> IndexHandler {
     let mut s = String::new();
     s.push_str("<html>");
-    s.push_str("<head><title>Rusty Web</title></head>");
+    s.push_str("<head><title>");
+    s.push_str(&config.main_page_title);
+    s.push_str("</title></head>");
     s.push_str("<body>");
-    s.push_str("<h1>Rusty Web</h1>");
+    s.push_str("<h1>");
+    s.push_str(&config.main_page_title);
+    s.push_str("</h1>");
     s.push_str("<h2>Commands:</h2>");
     s.push_str("<ul>");
     for command_info in config.commands.iter() {
@@ -152,7 +156,7 @@ fn main() {
   chain.link_before(logger_before);
   chain.link_after(logger_after);
 
-  match Iron::new(chain).http("localhost:3000") {
+  match Iron::new(chain).http(&config.listen_address) {
     Ok(listening) => info!("{:?}", listening),
     Err(err) => panic!("{:?}", err),
   }
