@@ -51,7 +51,7 @@ fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
 
   let configuration: Configuration = serde_yaml::from_str(&file_contents)?;
 
-  return Ok(configuration);
+  Ok(configuration)
 }
 
 fn current_time_string() -> String {
@@ -86,15 +86,16 @@ impl IndexHandler {
     s.push_str("</ul>");
     s.push_str("</body>");
     s.push_str("</html>");
+
     IndexHandler { index_string: s }
   }
 }
 
 impl Handler for IndexHandler {
   fn handle(&self, _: &mut Request) -> IronResult<Response> {
-    return Ok(Response::with((iron::status::Ok,
-                              Header(ContentType::html()), 
-                              self.index_string.clone())));
+    Ok(Response::with((iron::status::Ok,
+                       Header(ContentType::html()),
+                       self.index_string.clone())))
   }
 }
 
@@ -135,7 +136,8 @@ impl Handler for CommandHandler {
     s.push_str("</pre>");
     s.push_str("</body>");
     s.push_str("</html>");
-    return Ok(Response::with((iron::status::Ok, Header(ContentType::html()), s)));
+
+    Ok(Response::with((iron::status::Ok, Header(ContentType::html()), s)))
   }
 }
 
