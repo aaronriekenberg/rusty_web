@@ -1,0 +1,61 @@
+listen_address: 127.0.0.1:8080
+
+main_page_title: Aaron's OpenBSD Box
+
+commands:
+
+- http_path: /ifconfig
+  description: ifconfig
+  command: ifconfig
+  args: []
+
+- http_path: /netstat_an
+  description: netstat -an
+  command: netstat
+  args: [-an]
+
+- http_path: /netstat_binh
+  description: netstat -binh
+  command: netstat
+  args: [-binh]
+
+- http_path: /ntpctl
+  description: ntpctl
+  command: ntpctl
+  args: [-sa]
+
+- http_path: /top
+  description: top
+  command: top
+  args: [-b, -n]
+
+- http_path: /unbound_dump_infra
+  description: unbound dump_infra
+  command: doas
+  args: [/usr/sbin/unbound-control, dump_infra]
+
+- http_path: /unbound_stats_noreset
+  description: unbound stats_noreset
+  command: doas
+  args: [/usr/sbin/unbound-control, stats_noreset]
+
+- http_path: /uptime
+  description: uptime
+  command: uptime
+  args: []
+
+- http_path: /vmstat
+  description: vmstat
+  command: vmstat
+  args: []
+
+- http_path: /w
+  description: w
+  command: w
+  args: []
+
+static_paths:
+
+- http_path: /pfstat/
+  fs_path: /var/www/htdocs/pfstat/
+  include_in_main_page: true
