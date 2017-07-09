@@ -2,10 +2,12 @@ extern crate chrono;
 extern crate iron;
 #[macro_use] extern crate log;
 extern crate logger;
+extern crate mount;
 extern crate router;
 #[macro_use] extern crate serde_derive;
 extern crate serde_yaml;
 extern crate simple_logger;
+extern crate staticfile;
 
 use chrono::prelude::Local;
 use iron::Handler;
@@ -18,11 +20,14 @@ use iron::prelude::Request;
 use iron::prelude::Response;
 use log::LogLevel;
 use logger::Logger;
+use mount::Mount;
 use router::Router;
+use staticfile::Static;
 use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
+use std::path::Path;
 use std::process::Command;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -33,11 +38,19 @@ struct CommandInfo {
   args: Vec<String>
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct StaticPathInfo {
+  http_path: String,
+  fs_path: String,
+  include_in_main_page: bool
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 struct Configuration {
   listen_address: String,
   main_page_title: String,
-  commands: Vec<CommandInfo>
+  commands: Vec<CommandInfo>,
+  static_paths: Vec<StaticPathInfo>
 }
 
 fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
@@ -65,6 +78,9 @@ struct IndexHandler {
 
 impl IndexHandler {
   pub fn new(config: &Configuration) -> IndexHandler {
+    let static_paths_to_include: Vec<_> = 
+      config.static_paths.iter().filter(|s| s.include_in_main_page).collect();
+
     let mut s = String::new();
     s.push_str("<html>");
     s.push_str("<head><title>");
@@ -74,6 +90,7 @@ impl IndexHandler {
     s.push_str("<h1>");
     s.push_str(&config.main_page_title);
     s.push_str("</h1>");
+
     s.push_str("<h2>Commands:</h2>");
     s.push_str("<ul>");
     for command_info in config.commands.iter() {
@@ -84,6 +101,20 @@ impl IndexHandler {
       s.push_str("</a></li>");
     }
     s.push_str("</ul>");
+
+    if static_paths_to_include.len() > 0 {
+      s.push_str("<h2>Static Paths:</h2>");
+      s.push_str("<ul>");
+      for static_path in static_paths_to_include.iter() {
+        s.push_str("<li><a href=\"");
+        s.push_str(&static_path.http_path);
+        s.push_str("\">");
+        s.push_str(&static_path.fs_path);
+        s.push_str("</a></li>");
+      }
+      s.push_str("</ul>");
+    }
+
     s.push_str("</body>");
     s.push_str("</html>");
 
@@ -153,6 +184,28 @@ fn setup_router(
   }
 }
 
+fn setup_mount(
+  mount: &mut mount::Mount,
+  router: router::Router,
+  config: &Configuration) {
+
+  mount.mount("/", router);
+
+  for static_path_info in config.static_paths.iter() {
+    info!("static http path {} fs_path {}", &static_path_info.http_path, &static_path_info.fs_path);
+    mount.mount(&static_path_info.http_path, Static::new(Path::new(&static_path_info.fs_path)));
+  }
+}
+
+fn setup_chain(
+  chain: &mut iron::prelude::Chain) {
+
+  let (logger_before, logger_after) = Logger::new(None);
+
+  chain.link_before(logger_before);
+  chain.link_after(logger_after);
+}
+
 fn main() {
   simple_logger::init_with_level(LogLevel::Info).unwrap();
 
@@ -171,10 +224,11 @@ fn main() {
   let mut router = Router::new();
   setup_router(&mut router, &config);
 
-  let mut chain = Chain::new(router);
-  let (logger_before, logger_after) = Logger::new(None);
-  chain.link_before(logger_before);
-  chain.link_after(logger_after);
+  let mut mount = Mount::new();
+  setup_mount(&mut mount, router, &config);
+
+  let mut chain = Chain::new(mount);
+  setup_chain(&mut chain);
 
   match Iron::new(chain).http(&config.listen_address) {
     Ok(listening) => info!("{:?}", listening),
