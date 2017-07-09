@@ -10,6 +10,8 @@ fi
 
 $KILL_CMD rusty_web
 
-rm -f output
+if [ -f output ]; then
+  mv output output.1
+fi
 
 nohup ./rusty_web $CONFIG_FILE > output 2>&1 &
