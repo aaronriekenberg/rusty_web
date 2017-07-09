@@ -19,3 +19,7 @@ static_paths:
 - http_path: /test/
   fs_path: /tmp/
   include_in_main_page: true
+
+- http_path: /style.css
+  fs_path: resources/style.css
+  include_in_main_page: false

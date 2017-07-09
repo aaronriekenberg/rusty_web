@@ -83,9 +83,13 @@ impl IndexHandler {
 
     let mut s = String::new();
     s.push_str("<html>");
-    s.push_str("<head><title>");
+    s.push_str("<head>");
+    s.push_str("<title>");
     s.push_str(&config.main_page_title);
-    s.push_str("</title></head>");
+    s.push_str("</title>");
+    s.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+    s.push_str("<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">");
+    s.push_str("</head>");
     s.push_str("<body>");
     s.push_str("<h1>");
     s.push_str(&config.main_page_title);
@@ -93,7 +97,7 @@ impl IndexHandler {
 
     s.push_str("<h2>Commands:</h2>");
     s.push_str("<ul>");
-    for command_info in config.commands.iter() {
+    for command_info in &config.commands {
       s.push_str("<li><a href=\"");
       s.push_str(&command_info.http_path);
       s.push_str("\">");
@@ -105,7 +109,7 @@ impl IndexHandler {
     if static_paths_to_include.len() > 0 {
       s.push_str("<h2>Static Paths:</h2>");
       s.push_str("<ul>");
-      for static_path in static_paths_to_include.iter() {
+      for static_path in &static_paths_to_include {
         s.push_str("<li><a href=\"");
         s.push_str(&static_path.http_path);
         s.push_str("\">");
@@ -138,7 +142,7 @@ impl Handler for CommandHandler {
   fn handle(&self, _: &mut Request) -> IronResult<Response> {
     let mut command = Command::new(&self.command_info.command);
     let mut args_string = String::new();
-    for arg in self.command_info.args.iter() {
+    for arg in &self.command_info.args {
       command.arg(arg);
       args_string.push_str(arg);
       args_string.push(' ');
@@ -150,9 +154,13 @@ impl Handler for CommandHandler {
       };
     let mut s = String::new();
     s.push_str("<html>");
-    s.push_str("<head><title>");
+    s.push_str("<head>");
+    s.push_str("<title>");
     s.push_str(&self.command_info.description);
-    s.push_str("</title></head>");
+    s.push_str("</title>");
+    s.push_str("</head>");
+    s.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
+    s.push_str("<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">");
     s.push_str("<body>");
     s.push_str("<pre>");
     s.push_str("Now: ");
@@ -164,6 +172,7 @@ impl Handler for CommandHandler {
     s.push_str(&args_string);
     s.push_str("\n\n");
     s.push_str(&command_output);
+    s.push_str("\n");
     s.push_str("</pre>");
     s.push_str("</body>");
     s.push_str("</html>");
@@ -178,7 +187,7 @@ fn setup_router(
 
   router.get("/", IndexHandler::new(config), "index");
 
-  for command_info in config.commands.iter() {
+  for command_info in &config.commands {
     let handler = CommandHandler { command_info: command_info.clone() };
     router.get(&command_info.http_path, handler, &command_info.description);
   }
@@ -191,8 +200,7 @@ fn setup_mount(
 
   mount.mount("/", router);
 
-  for static_path_info in config.static_paths.iter() {
-    info!("static http path {} fs_path {}", &static_path_info.http_path, &static_path_info.fs_path);
+  for static_path_info in &config.static_paths {
     mount.mount(&static_path_info.http_path, Static::new(Path::new(&static_path_info.fs_path)));
   }
 }
