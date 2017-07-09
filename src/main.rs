@@ -217,18 +217,11 @@ fn setup_chain(
 }
 
 fn main() {
-  simple_logger::init_with_level(LogLevel::Info).unwrap();
+  simple_logger::init_with_level(LogLevel::Info).expect("init_with_level failed");
 
-  let config_file = match env::args().nth(1) {
-    Some(config_file) => config_file,
-    None => panic!("config file required as command line argument")
-  };
+  let config_file = env::args().nth(1).expect("config file required as command line argument");
 
-  let config = match read_config(&config_file) {
-    Ok(config) => config,
-    Err(error) => panic!("error reading configuration: {}", error)
-  };
-
+  let config = read_config(&config_file).expect("error reading configuration file");
   info!("config = {:?}", config);
 
   let mut router = Router::new();
@@ -240,8 +233,6 @@ fn main() {
   let mut chain = Chain::new(mount);
   setup_chain(&mut chain);
 
-  match Iron::new(chain).http(&config.listen_address) {
-    Ok(listening) => info!("{:?}", listening),
-    Err(err) => panic!("{:?}", err),
-  }
+  let listening = Iron::new(chain).http(&config.listen_address).expect("error listening");
+  info!("Listening on {}", listening.socket);
 }
