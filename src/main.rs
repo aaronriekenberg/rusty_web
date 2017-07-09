@@ -81,7 +81,7 @@ impl IndexHandler {
     let static_paths_to_include: Vec<_> = 
       config.static_paths.iter().filter(|s| s.include_in_main_page).collect();
 
-    let mut s = String::with_capacity(1024);
+    let mut s = String::new();
     s.push_str("<html>");
     s.push_str("<head>");
     s.push_str("<title>");
@@ -147,12 +147,14 @@ impl Handler for CommandHandler {
       args_string.push_str(arg);
       args_string.push(' ');
     }
+
     let command_output =
       match command.output() {
         Ok(output) => String::from_utf8_lossy(&output.stdout).into_owned(),
         Err(err) => format!("command error: {}", err),
       };
-    let mut s = String::new();
+
+    let mut s = String::with_capacity(1024);
     s.push_str("<html>");
     s.push_str("<head>");
     s.push_str("<title>");
