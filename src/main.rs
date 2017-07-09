@@ -34,7 +34,7 @@ struct CommandInfo {
   args: Vec<String>
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 struct StaticPathInfo {
   http_path: String,
   fs_path: String,
