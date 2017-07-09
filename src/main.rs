@@ -19,6 +19,7 @@ use iron::prelude::Response;
 use log::LogLevel;
 use logger::Logger;
 use router::Router;
+use std::env;
 use std::error::Error;
 use std::fs::File;
 use std::io::Read;
@@ -39,8 +40,10 @@ struct Configuration {
   commands: Vec<CommandInfo>
 }
 
-fn read_config() -> Result<Configuration, Box<Error>> {
-  let mut file = File::open("config.yml")?;
+fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
+  info!("reading {}", config_file);
+
+  let mut file = File::open(config_file)?;
 
   let mut file_contents = String::new();
 
@@ -151,7 +154,12 @@ fn setup_router(
 fn main() {
   simple_logger::init_with_level(LogLevel::Info).unwrap();
 
-  let config = match read_config() {
+  let config_file = match env::args().nth(1) {
+    Some(config_file) => config_file,
+    None => panic!("config file required as command line argument")
+  };
+
+  let config = match read_config(&config_file) {
     Ok(config) => config,
     Err(error) => panic!("error reading configuration: {}", error)
   };
