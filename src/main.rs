@@ -81,7 +81,7 @@ impl IndexHandler {
     let static_paths_to_include: Vec<_> = 
       config.static_paths.iter().filter(|s| s.include_in_main_page).collect();
 
-    let mut s = String::new();
+    let mut s = String::with_capacity(1024);
     s.push_str("<html>");
     s.push_str("<head>");
     s.push_str("<title>");
