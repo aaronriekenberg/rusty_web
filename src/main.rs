@@ -1,4 +1,5 @@
 extern crate chrono;
+#[macro_use] extern crate horrorshow;
 extern crate iron;
 #[macro_use] extern crate log;
 extern crate logger;
@@ -10,6 +11,8 @@ extern crate simple_logger;
 extern crate staticfile;
 
 use chrono::prelude::Local;
+use horrorshow::helper::doctype;
+use horrorshow::Template;
 use iron::Handler;
 use iron::headers::ContentType;
 use iron::modifiers::Header;
@@ -77,46 +80,47 @@ impl IndexHandler {
     let static_paths_to_include: Vec<_> = 
       config.static_paths.iter().filter(|s| s.include_in_main_page).collect();
 
-    let mut s = String::new();
-    s.push_str("<html>");
-    s.push_str("<head>");
-    s.push_str("<title>");
-    s.push_str(&config.main_page_title);
-    s.push_str("</title>");
-    s.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-    s.push_str("<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">");
-    s.push_str("</head>");
-    s.push_str("<body>");
-    s.push_str("<h1>");
-    s.push_str(&config.main_page_title);
-    s.push_str("</h1>");
-
-    s.push_str("<h2>Commands:</h2>");
-    s.push_str("<ul>");
-    for command_info in &config.commands {
-      s.push_str("<li><a href=\"");
-      s.push_str(&command_info.http_path);
-      s.push_str("\">");
-      s.push_str(&command_info.description);
-      s.push_str("</a></li>");
-    }
-    s.push_str("</ul>");
-
-    if static_paths_to_include.len() > 0 {
-      s.push_str("<h2>Static Paths:</h2>");
-      s.push_str("<ul>");
-      for static_path in &static_paths_to_include {
-        s.push_str("<li><a href=\"");
-        s.push_str(&static_path.http_path);
-        s.push_str("\">");
-        s.push_str(&static_path.fs_path);
-        s.push_str("</a></li>");
+    let s = html! {
+      : doctype::HTML;
+      html {
+        head {
+          title: &config.main_page_title;
+          meta(name = "viewport", content = "width=device, initial-scale=1");
+          link(rel = "stylesheet", type = "text/css", href = "style.css");
+        }
+        body {
+          h2 {
+            : &config.main_page_title;
+          }
+          h3 {
+            : "Comamnds:"
+          }
+          ul {
+            @ for command_info in &config.commands {
+              li {
+                a(href = &command_info.http_path) {
+                  : &command_info.description;
+                }
+              }
+            }
+          }
+          @ if static_paths_to_include.len() > 0 {
+            h3 {
+              : "Static Paths:";
+            }
+            ul {
+              @ for static_path in &static_paths_to_include {
+                li {
+                  a(href = &static_path.http_path) {
+                    : &static_path.fs_path;
+                  }
+                }
+              }
+            }
+          }
+        }
       }
-      s.push_str("</ul>");
-    }
-
-    s.push_str("</body>");
-    s.push_str("</html>");
+    }.into_string().expect("error creating index html string");
 
     IndexHandler { index_string: s }
   }
@@ -131,17 +135,30 @@ impl Handler for IndexHandler {
 }
 
 struct CommandHandler {
-  command_info: CommandInfo
+  command_info: CommandInfo,
+  args_string: String
+}
+
+impl CommandHandler {
+  pub fn new(command_info: CommandInfo) -> CommandHandler {
+
+    let mut args_string = String::new();
+
+    for arg in &command_info.args {
+      args_string.push_str(arg);
+      args_string.push(' ');
+    }
+
+    CommandHandler { command_info: command_info, args_string: args_string }
+  }
 }
 
 impl Handler for CommandHandler {
   fn handle(&self, _: &mut Request) -> IronResult<Response> {
     let mut command = Command::new(&self.command_info.command);
-    let mut args_string = String::new();
+
     for arg in &self.command_info.args {
       command.arg(arg);
-      args_string.push_str(arg);
-      args_string.push(' ');
     }
 
     let command_output =
@@ -150,30 +167,29 @@ impl Handler for CommandHandler {
         Err(err) => format!("command error: {}", err),
       };
 
-    let mut s = String::with_capacity(1024);
-    s.push_str("<html>");
-    s.push_str("<head>");
-    s.push_str("<title>");
-    s.push_str(&self.command_info.description);
-    s.push_str("</title>");
-    s.push_str("</head>");
-    s.push_str("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">");
-    s.push_str("<link rel=\"stylesheet\" type=\"text/css\" href=\"style.css\">");
-    s.push_str("<body>");
-    s.push_str("<pre>");
-    s.push_str("Now: ");
-    s.push_str(&current_time_string());
-    s.push_str("\n\n");
-    s.push_str("$ ");
-    s.push_str(&self.command_info.command);
-    s.push(' ');
-    s.push_str(&args_string);
-    s.push_str("\n\n");
-    s.push_str(&command_output);
-    s.push_str("\n");
-    s.push_str("</pre>");
-    s.push_str("</body>");
-    s.push_str("</html>");
+    let s = html! {
+      : doctype::HTML;
+      html {
+        head {
+          title: &self.command_info.description;
+          meta(name = "viewport", content = "width=device, initial-scale=1");
+          link(rel = "stylesheet", type = "text/css", href = "style.css");
+        }
+        body {
+          pre {
+            : "Now: ";
+            : &current_time_string();
+            : "\n\n";
+            : "$ ";
+            : &self.command_info.command;
+            : " ";
+            : &self.args_string;
+            : "\n\n";
+            : &command_output;
+          }
+        }
+      }
+    }.into_string().unwrap_or_else(|err| format!("error executing template: {}", err));
 
     Ok(Response::with((iron::status::Ok, Header(ContentType::html()), s)))
   }
@@ -186,7 +202,7 @@ fn setup_router(
   router.get("/", IndexHandler::new(config), "index");
 
   for command_info in &config.commands {
-    let handler = CommandHandler { command_info: command_info.clone() };
+    let handler = CommandHandler::new(command_info.clone());
     router.get(&command_info.http_path, handler, &command_info.description);
   }
 }
