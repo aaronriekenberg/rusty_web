@@ -149,10 +149,14 @@ impl CommandHandler {
   pub fn new(command_info: CommandInfo) -> CommandHandler {
 
     let mut args_string = String::new();
+    let mut first: bool = true;
 
     for arg in &command_info.args {
+      if !first {
+        args_string.push(' ');
+      }
       args_string.push_str(arg);
-      args_string.push(' ');
+      first = false;
     }
 
     CommandHandler { command_info: command_info, args_string: args_string }
@@ -184,8 +188,10 @@ impl CommandHandler {
     pre_string.push_str("\n\n");
     pre_string.push_str("$ ");
     pre_string.push_str(&self.command_info.command);
-    pre_string.push_str(" ");
-    pre_string.push_str(&self.args_string);
+    if self.args_string.len() > 0 {
+      pre_string.push_str(" ");
+      pre_string.push_str(&self.args_string);
+    }
     pre_string.push_str("\n\n");
     pre_string.push_str(&command_output);
 
