@@ -76,7 +76,9 @@ struct IndexHandler {
 }
 
 impl IndexHandler {
-  pub fn new(config: &Configuration) -> IndexHandler {
+
+  pub fn new(config: &Configuration) -> Result<IndexHandler, Box<Error>> {
+
     let static_paths_to_include: Vec<_> = 
       config.static_paths.iter().filter(|s| s.include_in_main_page).collect();
 
@@ -120,18 +122,21 @@ impl IndexHandler {
           }
         }
       }
-    }.into_string().expect("error creating index html string");
+    }.into_string()?;
 
-    IndexHandler { index_string: s }
+    Ok(IndexHandler { index_string: s })
   }
+
 }
 
 impl Handler for IndexHandler {
+
   fn handle(&self, _: &mut Request) -> IronResult<Response> {
     Ok(Response::with((iron::status::Ok,
                        Header(ContentType::html()),
                        self.index_string.clone())))
   }
+
 }
 
 struct CommandHandler {
@@ -140,6 +145,7 @@ struct CommandHandler {
 }
 
 impl CommandHandler {
+
   pub fn new(command_info: CommandInfo) -> CommandHandler {
 
     let mut args_string = String::new();
@@ -151,10 +157,9 @@ impl CommandHandler {
 
     CommandHandler { command_info: command_info, args_string: args_string }
   }
-}
 
-impl Handler for CommandHandler {
-  fn handle(&self, _: &mut Request) -> IronResult<Response> {
+  fn run_command(&self) -> String {
+
     let mut command = Command::new(&self.command_info.command);
 
     for arg in &self.command_info.args {
@@ -167,7 +172,29 @@ impl Handler for CommandHandler {
         Err(err) => format!("command error: {}", err),
       };
 
-    let s = html! {
+    command_output
+  }
+
+  fn build_pre_string(&self, command_output: String) -> String {
+
+    let mut pre_string = String::with_capacity(command_output.len() + 100);
+
+    pre_string.push_str("Now: ");
+    pre_string.push_str(&current_time_string());
+    pre_string.push_str("\n\n");
+    pre_string.push_str("$ ");
+    pre_string.push_str(&self.command_info.command);
+    pre_string.push_str(" ");
+    pre_string.push_str(&self.args_string);
+    pre_string.push_str("\n\n");
+    pre_string.push_str(&command_output);
+
+    pre_string
+  }
+
+  fn build_html_string(&self, pre_string: String) -> String {
+
+    let html_string = html! {
       : doctype::HTML;
       html {
         head {
@@ -177,29 +204,38 @@ impl Handler for CommandHandler {
         }
         body {
           pre {
-            : "Now: ";
-            : &current_time_string();
-            : "\n\n";
-            : "$ ";
-            : &self.command_info.command;
-            : " ";
-            : &self.args_string;
-            : "\n\n";
-            : &command_output;
+            : pre_string
           }
         }
       }
-    }.into_string().unwrap_or_else(|err| format!("error executing template: {}", err));
+    }.into_string()
+     .unwrap_or_else(|err| format!("error executing template: {}", err));
 
-    Ok(Response::with((iron::status::Ok, Header(ContentType::html()), s)))
+    html_string
   }
+
+}
+
+impl Handler for CommandHandler {
+
+  fn handle(&self, _: &mut Request) -> IronResult<Response> {
+    let command_output = self.run_command();
+
+    let pre_string = self.build_pre_string(command_output);
+
+    let html_string = self.build_html_string(pre_string);
+
+    Ok(Response::with((iron::status::Ok, Header(ContentType::html()), html_string)))
+  }
+
 }
 
 fn setup_router(
   router: &mut router::Router,
   config: &Configuration) {
 
-  router.get("/", IndexHandler::new(config), "index");
+  let index_handler = IndexHandler::new(config).expect("error creating IndexHandler");
+  router.get("/", index_handler, "index");
 
   for command_info in &config.commands {
     let handler = CommandHandler::new(command_info.clone());
