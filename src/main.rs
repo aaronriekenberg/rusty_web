@@ -141,34 +141,31 @@ impl Handler for IndexHandler {
 
 struct CommandHandler {
   command_info: CommandInfo,
-  args_string: String
+  command_line_string: String
 }
 
 impl CommandHandler {
 
   pub fn new(command_info: CommandInfo) -> CommandHandler {
 
-    let mut args_string = String::new();
-    let mut first: bool = true;
+    let mut command_line_string = String::new();
+
+    command_line_string.push_str("$ ");
+    command_line_string.push_str(&command_info.command);
 
     for arg in &command_info.args {
-      if !first {
-        args_string.push(' ');
-      }
-      args_string.push_str(arg);
-      first = false;
+      command_line_string.push(' ');
+      command_line_string.push_str(arg);
     }
 
-    CommandHandler { command_info: command_info, args_string: args_string }
+    CommandHandler { command_info: command_info, command_line_string: command_line_string }
   }
 
   fn run_command(&self) -> String {
 
     let mut command = Command::new(&self.command_info.command);
 
-    for arg in &self.command_info.args {
-      command.arg(arg);
-    }
+    command.args(&self.command_info.args);
 
     let command_output =
       match command.output() {
@@ -186,12 +183,7 @@ impl CommandHandler {
     pre_string.push_str("Now: ");
     pre_string.push_str(&current_time_string());
     pre_string.push_str("\n\n");
-    pre_string.push_str("$ ");
-    pre_string.push_str(&self.command_info.command);
-    if self.args_string.len() > 0 {
-      pre_string.push_str(" ");
-      pre_string.push_str(&self.args_string);
-    }
+    pre_string.push_str(&self.command_line_string);
     pre_string.push_str("\n\n");
     pre_string.push_str(&command_output);
 
