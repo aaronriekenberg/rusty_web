@@ -94,27 +94,29 @@ impl IndexHandler {
           h2 {
             : &config.main_page_title;
           }
-          h3 {
-            : "Comamnds:"
-          }
-          ul {
-            @ for command_info in &config.commands {
-              li {
-                a(href = &command_info.http_path) {
-                  : &command_info.description;
+          @ if config.commands.len() > 0 {
+            h3 {
+              : "Comamnds:"
+            }
+            ul {
+              @ for command_info in &config.commands {
+                li {
+                  a(href = &command_info.http_path) {
+                    : &command_info.description
+                  }
                 }
               }
             }
           }
           @ if static_paths_to_include.len() > 0 {
             h3 {
-              : "Static Paths:";
+              : "Static Paths:"
             }
             ul {
               @ for static_path in &static_paths_to_include {
                 li {
                   a(href = &static_path.http_path) {
-                    : &static_path.fs_path;
+                    : &static_path.fs_path
                   }
                 }
               }
