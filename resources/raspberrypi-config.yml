@@ -6,12 +6,12 @@ commands:
 
 - http_path: /ifconfig
   description: ifconfig
-  command: ifconfig
+  command: /sbin/ifconfig
   args: []
 
 - http_path: /iwconfig
   description: iwconfig
-  command: iwconfig
+  command: /sbin/iwconfig
   args: []
 
 - http_path: /netstat
