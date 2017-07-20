@@ -203,6 +203,9 @@ impl CommandHandler {
           link(rel = "stylesheet", type = "text/css", href = "style.css");
         }
         body {
+          a(href = "..") {
+            : ".."
+          }
           pre {
             : pre_string
           }
