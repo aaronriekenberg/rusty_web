@@ -68,7 +68,7 @@ fn read_config(config_file: &str) -> Result<Configuration, Box<Error>> {
 
 fn current_time_string() -> String {
   let now = Local::now();  
-  return now.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string();
+  now.format("%Y-%m-%d %H:%M:%S%.9f %z").to_string()
 }
 
 struct IndexHandler {
