@@ -6,7 +6,7 @@ CONFIG_FILE=config.yml
 if [ $(uname) = 'OpenBSD' ]; then
   KILL_CMD=pkill
   CONFIG_FILE=openbsd-config.yml
-elif [ $(uname) = 'Linux' ]; then
+else
   CONFIG_FILE=raspberrypi-config.yml
 fi
 
