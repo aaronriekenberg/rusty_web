@@ -6,6 +6,8 @@ CONFIG_FILE=config.yml
 if [ $(uname) = 'OpenBSD' ]; then
   KILL_CMD=pkill
   CONFIG_FILE=openbsd-config.yml
+elif [ $(uname) = 'Linux' ]; then
+  CONFIG_FILE=raspberrypi-config.yml
 fi
 
 $KILL_CMD rusty_web
