@@ -136,7 +136,7 @@ impl Handler for IndexHandler {
   fn handle(&self, _: &mut Request) -> IronResult<Response> {
     Ok(Response::with((iron::status::Ok,
                        Header(ContentType::html()),
-                       self.index_string.clone())))
+                       self.index_string.as_bytes())))
   }
 
 }
