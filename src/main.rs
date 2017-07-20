@@ -171,7 +171,12 @@ impl CommandHandler {
 
     let command_output =
       match command.output() {
-        Ok(output) => String::from_utf8_lossy(&output.stdout).into_owned(),
+        Ok(output) => {
+          let mut combined_output = String::new();
+          combined_output.push_str(&String::from_utf8_lossy(&output.stderr).into_owned());
+          combined_output.push_str(&String::from_utf8_lossy(&output.stdout).into_owned());
+          combined_output
+        },
         Err(err) => format!("command error: {}", err),
       };
 
