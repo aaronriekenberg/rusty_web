@@ -291,5 +291,5 @@ fn main() {
   setup_chain(&mut chain);
 
   let listening = Iron::new(chain).http(&config.listen_address).expect("error listening");
-  info!("Listening on {}", listening.socket);
+  info!("listening on {}", listening.socket);
 }
